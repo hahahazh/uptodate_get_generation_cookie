@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "UTD Cookie Sync",
+    "version": "1.0.0",
+    "description": "Đồng bộ session cookie cho UpToDate - cho phép nhiều người truy cập",
+    "permissions": [
+        "cookies",
+        "alarms",
+        "storage",
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://*.libook.xyz/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    }
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=380">
+  <title>UTD Cookie Sync</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>UTD Cookie Sync</span>
+      </div>
+      <div id="statusBadge" class="badge badge-idle">Chờ</div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="card" id="statusCard">
+      <div class="status-row">
+        <span class="label">Trạng thái</span>
+        <span id="statusText" class="value">--</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Lần sync cuối</span>
+        <span id="lastSyncText" class="value">--</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Cookies đã sync</span>
+        <span id="syncCountText" class="value">--</span>
+      </div>
+    </div>
+
+    <!-- Config Card -->
+    <div class="card">
+      <div class="card-title">⚙️ Cấu hình Server</div>
+      <div class="form-group">
+        <label for="serverUrl">Server URL</label>
+        <input type="url" id="serverUrl" placeholder="http://localhost:3456" />
+      </div>
+      <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="Nhập API key" />
+      </div>
+      <button id="saveConfigBtn" class="btn btn-primary">
+        💾 Lưu cấu hình
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="syncNowBtn" class="btn btn-accent">
+        🔄 Sync ngay
+      </button>
+      <button id="openUtdBtn" class="btn btn-secondary">
+        🌐 Mở UpToDate
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>Auto-sync mỗi 30 phút</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
