@@ -5,6 +5,21 @@
 const ALARM_NAME = 'utd-cookie-sync';
 const SYNC_INTERVAL_MINUTES = 30;
 
+// Chuẩn hóa giá trị sameSite cho chrome.cookies API (chỉ chấp nhận chữ thường)
+function normalizeSameSite(val) {
+    if (!val) return 'lax';
+    const lower = val.toLowerCase();
+    if (lower === 'none') return 'no_restriction';
+    if (lower === 'strict') return 'strict';
+    return 'lax'; // mặc định
+}
+
+// Các URL đích cần bơm cookie vào - bao gồm cả dispatcher (cần cho OAuth callback)
+const TARGET_URLS = [
+    'https://utd.libook.xyz',
+    'https://dispatcher.libook.xyz',
+];
+
 // Đồng bộ cookie từ server
 async function syncCookies() {
     try {
@@ -31,55 +46,108 @@ async function syncCookies() {
             throw new Error('No cookies received');
         }
 
-        // Inject cookies vào browser
+        console.log(`[UTD Sync] Received ${data.cookies.length} cookies from server`);
+
+        // ═══════════════════════════════════════════
+        // BƯỚC 1: Xóa sạch cookies cũ của libook.xyz trước khi bơm mới
+        // (Tránh xung đột Domain Cookie vs Host-Only Cookie)
+        // ═══════════════════════════════════════════
+        for (const targetUrl of TARGET_URLS) {
+            const existing = await chrome.cookies.getAll({ url: targetUrl });
+            for (const old of existing) {
+                await chrome.cookies.remove({ url: targetUrl, name: old.name });
+            }
+        }
+        // Xoá cả cookies .libook.xyz gốc
+        const rootCookies = await chrome.cookies.getAll({ domain: '.libook.xyz' });
+        for (const old of rootCookies) {
+            await chrome.cookies.remove({
+                url: 'https://libook.xyz' + old.path,
+                name: old.name,
+            });
+        }
+        console.log('[UTD Sync] 🧹 Cleared old libook.xyz cookies');
+
+        // ═══════════════════════════════════════════
+        // BƯỚC 2: Bơm toàn bộ cookies mới
+        // ═══════════════════════════════════════════
         let setCookieCount = 0;
+        const failedCookies = [];
+
         for (const cookie of data.cookies) {
             try {
-                // Xác định URL của trang chủ yếu dựa vào domain của cookie
-                let cookieUrl = 'https://utd.libook.xyz';
+                // Xác định URL gốc dựa vào domain
+                let primaryUrl = 'https://utd.libook.xyz';
                 if (cookie.domain) {
-                    cookieUrl = 'https://' + cookie.domain.replace(/^\./, '');
+                    primaryUrl = 'https://' + cookie.domain.replace(/^\./, '');
                 }
 
                 const cookieDetails = {
-                    url: cookieUrl,
+                    url: primaryUrl,
                     name: cookie.name,
                     value: cookie.value,
                     path: cookie.path || '/',
                     secure: cookie.secure !== false,
                     httpOnly: cookie.httpOnly || false,
-                    sameSite: cookie.sameSite || 'lax',
+                    sameSite: normalizeSameSite(cookie.sameSite),
                 };
 
-                // BẢO MẬT COOKIE QUAN TRỌNG:
-                // Nếu cookie trả về có dấu chấm ở đầu (Ví dụ: .libook.xyz), nó là cookie toàn cục (Domain Cookie).
-                // Nếu không có dấu chấm (Ví dụ: utd.libook.xyz), nó là HostOnly cookie.
-                // Nếu ta cố tình set domain='utd.libook.xyz', Chrome sẽ tự động ghép thêm dấu chấm thành '.utd.libook.xyz', 
-                // làm thay đổi hoàn toàn tính chất cookie khiến NextAuth từ chối nhận diện.
-                // Do đó, ta CHỈ thêm thuộc tính domain nếu nó bắt đầu bằng dấu chấm!
-
+                // __Host- cookies: KHÔNG ĐƯỢC có thuộc tính domain
+                // Domain cookies (dấu chấm đầu): giữ nguyên domain
+                // Host-only cookies: BỎ QUA domain, để Chrome tự gán
                 if (!cookie.name.startsWith('__Host-')) {
                     if (cookie.domain && cookie.domain.startsWith('.')) {
                         cookieDetails.domain = cookie.domain;
                     }
-                    // Nếu là HostOnly cookie, ta BỎ QUA thuộc tính domain. 
-                    // Chrome sẽ tự động gán nó thành HostOnly cho cái url ở trên.
                 }
 
-                await chrome.cookies.set(cookieDetails);
-                setCookieCount++;
-                console.log(`[UTD Sync] ✓ Set cookie: ${cookie.name} on ${cookieUrl}`);
+                const result = await chrome.cookies.set(cookieDetails);
+                if (result) {
+                    setCookieCount++;
+                    console.log(`[UTD Sync] ✓ Set: ${cookie.name} → ${primaryUrl} (domain=${result.domain}, hostOnly=${result.hostOnly})`);
+                } else {
+                    failedCookies.push(cookie.name);
+                    console.warn(`[UTD Sync] ✗ chrome.cookies.set returned null for: ${cookie.name}`);
+                }
             } catch (cookieErr) {
-                console.warn(`[UTD Sync] ✗ Failed to set cookie ${cookie.name}:`, cookieErr.message);
+                failedCookies.push(cookie.name + ': ' + cookieErr.message);
+                console.warn(`[UTD Sync] ✗ Exception setting ${cookie.name}:`, cookieErr.message);
             }
         }
 
-        const now = new Date().toISOString();
-        await chrome.storage.local.set({ lastSync: now, syncCount: setCookieCount });
-        await updateStatus('synced', `Đồng bộ ${setCookieCount} cookies`);
+        // ═══════════════════════════════════════════
+        // BƯỚC 3: Xác minh ngược — đọc lại cookies từ Chrome để đảm bảo chúng tồn tại
+        // ═══════════════════════════════════════════
+        const verify = await chrome.cookies.getAll({ url: 'https://utd.libook.xyz' });
+        const verifiedNames = verify.map(c => c.name);
+        console.log(`[UTD Sync] 🔍 Verified ${verify.length} cookies on utd.libook.xyz:`, verifiedNames);
 
-        console.log(`[UTD Sync] ✅ Synced ${setCookieCount} cookies at ${now}`);
-        return { success: true, count: setCookieCount, time: now };
+        const hasSession = verifiedNames.includes('next-auth.session-token');
+        if (!hasSession) {
+            console.error('[UTD Sync] ❌ CRITICAL: next-auth.session-token NOT found after injection!');
+        }
+
+        const now = new Date().toISOString();
+        const diagMsg = failedCookies.length > 0
+            ? `Set ${setCookieCount}/${data.cookies.length}, FAILED: ${failedCookies.join(', ')}`
+            : `Đồng bộ ${setCookieCount} cookies ✓ Verified: ${verify.length}`;
+
+        await chrome.storage.local.set({
+            lastSync: now,
+            syncCount: setCookieCount,
+            syncDiag: diagMsg,
+            syncVerified: verify.length,
+        });
+        await updateStatus(hasSession ? 'synced' : 'error', diagMsg);
+
+        console.log(`[UTD Sync] ✅ Done: ${diagMsg}`);
+        return {
+            success: hasSession,
+            count: setCookieCount,
+            verified: verify.length,
+            failed: failedCookies,
+            time: now,
+        };
     } catch (err) {
         console.error('[UTD Sync] ❌ Sync failed:', err.message);
         await updateStatus('error', err.message);

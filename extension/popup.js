@@ -94,10 +94,11 @@ saveConfigBtn.addEventListener('click', () => {
             saveConfigBtn.textContent = '💾 Lưu cấu hình';
 
             if (result?.success) {
-                showToast(`✅ Đã sync ${result.count} cookies!`, 'success');
+                showToast(`✅ Set ${result.count}, Verified ${result.verified} cookies!`, 'success');
                 updateBadge('synced');
             } else {
-                showToast(`❌ ${result?.error || 'Lỗi không xác định'}`, 'error');
+                const failInfo = result?.failed?.length ? ` | Failed: ${result.failed.join(', ')}` : '';
+                showToast(`❌ ${result?.error || 'Lỗi'}${failInfo}`, 'error');
                 updateBadge('error');
             }
 
@@ -118,10 +119,11 @@ syncNowBtn.addEventListener('click', () => {
         syncNowBtn.textContent = '🔄 Sync ngay';
 
         if (result?.success) {
-            showToast(`✅ Đã sync ${result.count} cookies!`, 'success');
+            showToast(`✅ Set ${result.count}, Verified ${result.verified} cookies!`, 'success');
             updateBadge('synced');
         } else {
-            showToast(`❌ ${result?.error || 'Lỗi kết nối'}`, 'error');
+            const failInfo = result?.failed?.length ? ` | Failed: ${result.failed.join(', ')}` : '';
+            showToast(`❌ ${result?.error || 'Lỗi'}${failInfo}`, 'error');
             updateBadge('error');
         }
 
