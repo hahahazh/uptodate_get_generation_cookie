@@ -58,3 +58,26 @@ Vì `localhost` chỉ chạy trong máy của bạn, máy tính khác (ở nhà/
 5. Bấm nút **🌐 Mở UpToDate**. Trình duyệt sẽ đưa bạn thẳng vào trang web đọc thư viện y khoa miễn phí mà không cần đăng nhập lại.
 
 > **💡 Lưu ý cho người dùng:** Chỉ cần làm 1 lần duy nhất! Sau đó Extension sẽ tự chạy ngầm, bạn cứ vào UpToDate bình thường.
+
+---
+
+## PHẦN 3: ĐƯA LÊN FIREBASE FUNCTIONS (SERVERLESS)
+
+Nếu bạn không có VPS và muốn dùng Cloud Functions miễn phí của Google Firebase:
+
+**Yêu cầu:** Tài khoản Firebase phải được liên kết thẻ tín dụng (Gói Blaze) thì mới cho phép Functions gọi API ra ngoài mạng Internet (Firebase tính phí theo mức dùng, nhưng ứng dụng này dùng SIÊU ÍT nên sẽ ở mức $0.00).
+
+1. Bạn cần cài đặt [Node.js](https://nodejs.org/) và cài Firebase Tools trên máy: 
+   `npm install -g firebase-tools`
+2. Tạo một thư mục ảo trống, mở Terminal và chạy lệnh đăng nhập: 
+   `firebase login`
+3. Khởi tạo dự án Firebase Functions: 
+   `firebase init functions` 
+   *(Chọn Use an existing project -> Chọn dự án của bạn -> Chọn JavaScript)*
+4. Vào thư mục `functions` vừa tạo ra, cài đặt thư viện chuyên biệt (Puppeteer-core và Sparticuz Chromium giúp chạy trình duyệt ảo trên Cloud):
+   `npm install firebase-admin firebase-functions puppeteer-core @sparticuz/chromium`
+5. Copy toàn bộ nội dung file `firebase-function-example.js` (có sẵn trong dự án này) dán đè vào file `functions/index.js` của Firebase. Nhớ điền lại `UTD_USERNAME` và `UTD_PASSWORD` vào code.
+6. Mở Terminal ở thư mục `functions`, gõ lệnh để đẩy code lên máy chủ:
+   `firebase deploy --only functions`
+   
+**Kết quả:** Bạn sẽ nhận được 1 đường link API từ Firebase (ví dụ: `https://us-central1-abcd.cloudfunctions.net/getCookie`). Hãy copy link này cung cấp cho người dùng ở Phần 2 thay vì URL Của Ngrok hay VPS!
