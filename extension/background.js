@@ -51,9 +51,19 @@ async function syncCookies() {
                     sameSite: cookie.sameSite || 'lax',
                 };
 
-                // Trình duyệt từ chối nhận thuộc tính domain nếu cookie bắt đầu bằng __Host-
+                // BẢO MẬT COOKIE QUAN TRỌNG:
+                // Nếu cookie trả về có dấu chấm ở đầu (Ví dụ: .libook.xyz), nó là cookie toàn cục (Domain Cookie).
+                // Nếu không có dấu chấm (Ví dụ: utd.libook.xyz), nó là HostOnly cookie.
+                // Nếu ta cố tình set domain='utd.libook.xyz', Chrome sẽ tự động ghép thêm dấu chấm thành '.utd.libook.xyz', 
+                // làm thay đổi hoàn toàn tính chất cookie khiến NextAuth từ chối nhận diện.
+                // Do đó, ta CHỈ thêm thuộc tính domain nếu nó bắt đầu bằng dấu chấm!
+
                 if (!cookie.name.startsWith('__Host-')) {
-                    cookieDetails.domain = cookie.domain || '.libook.xyz';
+                    if (cookie.domain && cookie.domain.startsWith('.')) {
+                        cookieDetails.domain = cookie.domain;
+                    }
+                    // Nếu là HostOnly cookie, ta BỎ QUA thuộc tính domain. 
+                    // Chrome sẽ tự động gán nó thành HostOnly cho cái url ở trên.
                 }
 
                 await chrome.cookies.set(cookieDetails);
