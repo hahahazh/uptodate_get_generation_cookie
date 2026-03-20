@@ -186,6 +186,19 @@ app.get('/cookie', requireKey, (req, res) => {
     });
 });
 
+// Root Endpoint
+app.get('/', (req, res) => {
+    res.send(`
+        <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
+                <h1>✅ UTD Cookie Sync Server is Running!</h1>
+                <p>Status API: <a href="/status">/status</a></p>
+                <p><i>Powered by Render.com</i></p>
+            </body>
+        </html>
+    `);
+});
+
 app.get('/status', (req, res) => {
     res.json({
         server: 'UTD Cookie Sync Server',
