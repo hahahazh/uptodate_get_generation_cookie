@@ -35,18 +35,30 @@ async function syncCookies() {
         let setCookieCount = 0;
         for (const cookie of data.cookies) {
             try {
-                await chrome.cookies.set({
-                    url: 'https://utd.libook.xyz',
+                // Xác định URL của trang chủ yếu dựa vào domain của cookie
+                let cookieUrl = 'https://utd.libook.xyz';
+                if (cookie.domain) {
+                    cookieUrl = 'https://' + cookie.domain.replace(/^\./, '');
+                }
+
+                const cookieDetails = {
+                    url: cookieUrl,
                     name: cookie.name,
                     value: cookie.value,
-                    domain: cookie.domain || '.libook.xyz',
                     path: cookie.path || '/',
                     secure: cookie.secure !== false,
                     httpOnly: cookie.httpOnly || false,
                     sameSite: cookie.sameSite || 'lax',
-                });
+                };
+
+                // Trình duyệt từ chối nhận thuộc tính domain nếu cookie bắt đầu bằng __Host-
+                if (!cookie.name.startsWith('__Host-')) {
+                    cookieDetails.domain = cookie.domain || '.libook.xyz';
+                }
+
+                await chrome.cookies.set(cookieDetails);
                 setCookieCount++;
-                console.log(`[UTD Sync] ✓ Set cookie: ${cookie.name}`);
+                console.log(`[UTD Sync] ✓ Set cookie: ${cookie.name} on ${cookieUrl}`);
             } catch (cookieErr) {
                 console.warn(`[UTD Sync] ✗ Failed to set cookie ${cookie.name}:`, cookieErr.message);
             }

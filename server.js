@@ -92,9 +92,17 @@ class SessionManager {
                 console.log('[Session] ⚠️ Not on dispatcher login page. Maybe already logged in?');
             }
 
+            // Đã đăng nhập xong
+            console.log('[Session] ✅ NextAuth/Django dispatcher login successful');
+
             // ─── Step 3: Lấy cookies ───
             console.log('[Session] Extracting cookies...');
-            const cookies = await page.cookies('https://utd.libook.xyz', 'https://libook.xyz');
+            // Lấy TẤT CẢ cookie (Của utd, libook và dispatcher)
+            const cookies = await page.cookies(
+                "https://utd.libook.xyz",
+                "https://libook.xyz",
+                "https://dispatcher.libook.xyz"
+            );
             this.allCookies = cookies;
 
             const sessionCookie = cookies.find(c => c.name === 'next-auth.session-token');
